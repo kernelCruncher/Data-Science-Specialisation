@@ -1,0 +1,122 @@
+Milestone Report
+=================
+
+## Data Loading and Cleaning
+We load up the three files:
+```{r cache=T, warning=F, message = F}
+linesTwitter<- readLines("en_US.twitter.txt", skipNul = TRUE)
+linesBlog<- readLines("en_US.blogs.txt", skipNul = TRUE)
+linesNews<- readLines("en_US.news.txt", skipNul = TRUE)
+```
+
+The number of lines for the twitter, blog and news corpus are respectively:
+```{r cache=T, warning=F, message = F, echo = F, eval= T}
+length(linesTwitter)
+length(linesBlog)
+length(linesNews)
+```
+
+```{r echo = F, eval = T}
+badwords<-"(shit|fuck|prick|cunt)( |[^ ]*)"
+```
+
+We clean each file by removing bad language, numbers and excessive whitespace:
+```{r cache=T}
+cleaner<- function(lines){
+lengthOfFile<-length(lines)
+lines<-gsub("\\.|\\;|\\,|\\)|\\(|\\:|\\#|\\$|\\!|\"", " ", lines)
+lines<-gsub(badwords, "", lines, ignore.case = TRUE)
+lines<-gsub("[0-9]", " ", lines)
+lines<-gsub("\\&", " and ", lines)
+lines<-gsub("[^[:graph:]]", " ", lines)
+lines<-gsub(" +", " ", lines)}
+cleanedCorpus <- sapply(list("Twitter" =linesTwitter, "Blog" = linesBlog, "News" = linesNews), cleaner)
+```
+
+## Sampling 
+We now take just a sample of the original corpus for each medium, say 0.5%, and write it to an output file:
+```{r cache=T, eval=T, echo = T}
+sampler<- function(inputFile,outputFile){
+set.seed(1)
+lengthOfFile<- length(inputFile)
+vector<- rbinom(lengthOfFile,1,0.005)
+outputFileLines<-character(0)
+for (line in 1: lengthOfFile){
+  if (vector[line] == 1){
+    outputFileLines<- c(outputFileLines, inputFile[line])}
+}
+
+fileConn<-file(outputFile)
+writeLines(outputFileLines, fileConn)
+close(fileConn)}
+
+sampler(cleanedCorpus$Twitter, "outputTwitter.txt")
+sampler(cleanedCorpus$Blog, "outputBlog.txt")
+sampler(cleanedCorpus$News, "outputNews.txt")
+```
+
+## Exploratory Data Analysis
+We now load up our samples and create some exploratory analysis. First we count the number of words for each line and represent this word count in a graph. 
+```{r echo = F}
+sampleFiles <- list( "Twitter" = readLines("outputTwitter.txt"), "Blog" = readLines("outputBlog.txt"), "News" = readLines("outputNews.txt"))
+wordCounter<- function(string1){
+  sapply(strsplit(string1, " "), length)}
+
+wordcount<- list("Twitter" = sapply(sampleFiles$Twitter, wordCounter), "Blog" = sapply(sampleFiles$Blog, wordCounter), "News" = sapply(sampleFiles$News, wordCounter))
+
+par(mfrow=c(1,3))
+hist(wordcount$Twitter, main = "Histogram for Twitter word count", col = "blue")
+hist(wordcount$Blog, main = "Histogram for Blog word count", col = "blue", xlab = "wordcount$Blog" )
+hist(wordcount$News, main = "Histogram for News word count", col = "blue")
+```
+
+We now show the most common words. First we must make a corpus from the list for each communication channel and then create a Document Transfer Matrix.
+```{r echo=T, warning=F, message=F}
+library(tm)
+library(wordcloud)
+corp<-list("Twitter"=Corpus(VectorSource(sampleFiles$Twitter)), "Blog"=Corpus(VectorSource(sampleFiles$Blog)), "News"=Corpus(VectorSource(sampleFiles$News)))
+
+dtm<-list("Twitter" = DocumentTermMatrix(corp$Twitter),"Blog"= DocumentTermMatrix(corp$Blog, DocumentTermMatrix(corp$Twitter)), "News"= DocumentTermMatrix(corp$News, DocumentTermMatrix(corp$Twitter)))
+
+list("Twitter" = findFreqTerms(dtm$Twitter, 1500, Inf), "Blog"=findFreqTerms(dtm$Blog, 1500, Inf), "News"=findFreqTerms(dtm$News, 100, Inf))
+```
+
+Unsurprisingly, these are mostly stop words. This supports the strength of our analysis. Let's remove these stopwords and create some word clouds for the results. The following are wordclouds for the top 10 words for Twitter, Blog and News, respectively:
+```{r echo = FALSE, eval = TRUE, results=F}
+dtm<-list("Twitter" = DocumentTermMatrix(corp$Twitter, control = list(stopwords = TRUE)),
+          "Blog"= DocumentTermMatrix(corp$Blog, control = list(stopwords = TRUE)),
+        "News"= DocumentTermMatrix(corp$News, control = list(stopwords=TRUE)))
+
+list("Twitter" = findFreqTerms(dtm$Twitter, 500, Inf), "Blog"=findFreqTerms(dtm$Blog, 500, Inf), "News"=findFreqTerms(dtm$News, 25, Inf))
+
+matrixTwit <- as.matrix(dtm[["Twitter"]])
+vTwit <- sort(colSums(matrixTwit),decreasing=TRUE)
+dTwit <- data.frame(word = names (vTwit),freq=vTwit)
+
+matrixBlog <- as.matrix(dtm[["Blog"]])
+vBlog <- sort(colSums(matrixBlog),decreasing=TRUE)
+dBlog <- data.frame(word = names (vBlog),freq=vBlog)
+
+matrixNews <- as.matrix(dtm[["News"]])
+vNews <- sort(colSums(matrixNews),decreasing=TRUE)
+dNews <- data.frame(word = names (vNews),freq=vNews)
+```
+```{r echo = F, warnings = F}
+set.seed(1234)
+par(mfrow=c(1,3))
+wordcloud(words = dTwit$word, freq = dTwit$freq, min.freq = 1,
+          max.words=10, random.order=FALSE, rot.per=0.35, 
+          colors=brewer.pal(8, "Dark2"), scale=c(3,1), use.r.layout = F)
+title("Twitter")
+wordcloud(words = dBlog$word, freq = dBlog$freq, min.freq = 1,
+          max.words=10, random.order=FALSE, rot.per=0.35, 
+          colors=brewer.pal(8, "Dark2"), scale=c(3,1), use.r.layout = F)
+title("Blog")
+wordcloud(words = dNews$word, freq = dNews$freq, min.freq = 1,
+          max.words=10, random.order=FALSE, rot.per=0.35, 
+          colors=brewer.pal(8, "Dark2"), scale=c(3,1), use.r.layout = F)
+title("News")
+```
+
+## App Plans
+I think it will be necessary for the user to specify their medium of communication in order to produce the most accurate application; after all, people will choose shorter words on Twitter than in a blog or news article, say, to account for the 140 character cap. This will need to be incorporated into the application. Some sort of dictionary will also need to be calculated for each n-gram using the Weka and NGramTokeniser functions. and from there (depending on how many words the user has typed into the input) we will extrapolate what the next word is likely to be, resetting the n-gram analysis after each full stop.
