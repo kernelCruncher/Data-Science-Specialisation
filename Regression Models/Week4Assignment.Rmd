@@ -1,0 +1,57 @@
+Week 4 Assignment
+========================
+
+##Executive Summary
+In this project we study the mtcars dataset and invetsigate the following questions:
+
+* Is an automatic or manual transmission better for MPG?
+* Quantify the MPG difference between automatic and manual transmissions?
+
+We determined the factors that contribute most to MPG are Transmission, Weight and Quarter Mile Time (qsec). Our model explains 85% of the total variation in MPG. Evidence suggests that in general Manual cars get more miles per gallon.
+
+##Data Processing
+We first load the data mtcars as well as any additional libraries we will need. We also set the discrete 'am' variable to a factor type since this tells us if the cars is automatic (1) or manual (0).
+```{r message=FALSE, warning=FALSE}
+library(dplyr)
+library(car)
+data(mtcars)
+mtcars$am<-as.factor(mtcars$am)
+```
+
+##Exploratory Data Analysis
+A boxplot suggests that manual cars get more miles per gallon than automatic.
+```{r fig1, fig.height = 3, fig.width = 5}
+mpgdata<-select(mtcars, c("mpg","am"))
+levels(mpgdata$am) <- c("Automatic", "Manual")
+plot(x=mpgdata$am, y=mpgdata$mpg, ylab = "MPG", xlab = "Transmission Type")
+```
+
+The p-value for the coefficient for am in the following simple linear model is significant at the 5% level (against the null hypothesis it is zero) and therefore there is evidence to include the transmission predictor in the model. However, we haven't taken account of other variables, and therefore could be susceptible to Simpson's Paradox, whilst also at risk of excluding other predictors that could refine the model.
+
+```{r}
+summary(lm(data=mpgdata, mpg~.))$coeff
+summary(lm(data=mpgdata, mpg~.))$r.squared
+```
+
+##Modelling
+Let's run a Variance Inflation Factor diagnostic.
+```{r}
+fit<-lm(data=mtcars, mpg~.)
+vif(fit)
+```
+
+Given that a lot of the variables are over 10, we see that there is clearly some collinearity going on. This suggests that we cannot simply use all the predictors in the model (like in fit). We instead use R's function step() to build a model which will discern which predictors to use.
+
+```{r}
+betterFit<-step(lm(data = mtcars, mpg ~ .), trace=0)
+summary(betterFit)
+```
+We should include the predictors Weight(wt) and Quarter Mile Time (qsec) as well as transmission according to the step() method. Note that this new model explains 85% of the variation while the model with just Transmission explains 36%.
+
+##Appendix 
+We include the following residual plots:
+```{r}
+par(mfrow = c(2,2))
+plot(betterFit)
+```
+
