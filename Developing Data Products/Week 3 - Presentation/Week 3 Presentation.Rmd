@@ -1,0 +1,21 @@
+---
+title: "Week 3 Presentation"
+author: "Peter P"
+date: "30 December 2018"
+output: ioslides_presentation
+---
+## Introduction
+
+Here is my visualisation:
+
+## Plotly
+
+Here is my Plotly visualisation.
+```{r echo=FALSE, warning=FALSE, message=FALSE}
+library(plotly)
+plot_ly(mtcars, x=~wt, y=~mpg, type="scatter3d", mode="markers", z=~drat, color = ~disp)
+```
+
+## Thanks
+
+Thanks for reading.

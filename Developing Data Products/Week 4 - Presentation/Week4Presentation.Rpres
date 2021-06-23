@@ -1,0 +1,47 @@
+Shiny Application
+========================================================
+author: Peter P.
+date: 
+autosize: true
+transition:rotate
+
+Introduction
+========================================================
+
+I created a Shiny application that used the USArrests data set.
+
+```{r}
+data("USArrests")
+str(USArrests)
+```
+
+Overview
+========================================================
+
+The user was asked to input an Urban Popualtion Percentage and specify 
+(using a radio button) whether they wished to predict the number of Murders,
+Rapes or Assaults. A plot would then appear along with a prediction for what
+the Murder/Rape/Assault value would be for that Urban Population Percentage.
+
+
+A linear model was fitted using the `lm` function to obtain the result. The validity of such a model was not explored. Also, `switch` statements were instrumental in getting this code to perform as expected.
+
+Server Calculations
+============================================================
+
+Here is an extract of the server code
+```{r eval = F}
+model1<-lm(Murder~UrbanPop, data = USArrests)
+  model2<-lm(Rape~UrbanPop, data = USArrests)
+  model3<-lm(Assault~UrbanPop, data = USArrests)
+  model1pred<- reactive({
+    urbanInput<-input$sliderUrb
+    predict(model1, newdata = data.frame(UrbanPop=urbanInput))})
+```
+
+Link
+============================================================
+See the application for yourself at:
+
+https://kernelcruncher.shinyapps.io/USArrestsApp/
+
