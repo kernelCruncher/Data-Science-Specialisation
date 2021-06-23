@@ -1,0 +1,45 @@
+---
+output: 
+  html_document:
+    keep_md: TRUE
+
+---
+
+Practical Machine Learning Assignment
+============================================
+
+###Data processing and Cross-Validation
+We load the data and relevant libraries. First we remove those variables that are either mostly NA or are just for naming. We divide the data into two sets since we intend to use a random forest algorithm, and this does not require k-fold validation.
+```{r message=FALSE, warning=FALSE}
+library(caret)
+library(e1071)
+traindata<-read.csv("pml-training.csv",na.strings=c("NA","#DIV/0!", ""))
+traindata<-traindata[,-(1:5)]
+naMost<- sapply(traindata, function(x) mean(is.na(x))) > 0.95
+traindata<-traindata[,naMost==FALSE]
+```
+
+We divide the data into two sets since we intend to use a random forest algorithm, and this does not require k-fold validation.
+```{r}
+train<-createDataPartition(y=traindata$classe, p=0.60, list=FALSE)
+training<-traindata[train,]
+testing<-traindata[-train,]
+```
+
+###Machine Learning Models
+As we are trying to predict a factor variable we will use a Random Forest approach - it is also flexible, easy to use and produces very powerful results. We now this algorithm against the test portion of our training set.
+```{r}
+fit <- train(classe~.,method = "rf", data = training, ntree = 120)
+prediction<-predict(fit, testing)
+```
+We now see that the accuracy is 99.68%.
+```{r}
+confusionMatrix(testing$classe, prediction)
+```
+
+###Conclusion
+We load the data from the actual test set and get our predictions.
+```{r}
+testdata<-read.csv("pml-testing.csv",na.strings=c("NA","#DIV/0!", ""))
+predict(fit, testdata)
+```
