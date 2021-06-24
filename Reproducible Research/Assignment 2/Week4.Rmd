@@ -1,0 +1,89 @@
+Storms and their Impact on the United States
+====================================================================
+
+## Synopsis
+In this analysis we use the U.S. National Oceanic and Atmospheric Administration's (NOAA) storm database to investigate what effect storms have on public health as well as the economy. This database tracks characteristics of major storms and weather events in the United States, including when and where they occur, as well as estimates of any fatalities, injuries, and property damage. The events in the database start in the year 1950 and end in November 2011. We assert that tornados are the most harmful (in terms of injuries and fatalities) on the community and that floods have the greatest economic consequences.
+
+## Data Processing
+We first load the relevant libraries we will use and read in the data, identifying the NA values by "?".
+```{r}
+library(dplyr)
+library(ggplot2)
+
+data<-read.csv("repdata_data_StormData.csv.bz2", na = "?")
+```
+Since many of the event types appear repeatedly with various spelling mistakes and case differences we transform the data using regex and attempt to iron out these inconsistencies.
+```{r}
+data$EVTYPE <- toupper(data$EVTYPE)
+data$EVTYPE[grepl("HURRICANE", data$EVTYPE)] <- "HURRICANE"  
+data$EVTYPE[grepl("ICE|SNOW|FROST|SLEET", data$EVTYPE)] <- "SNOW"
+data$EVTYPE[grepl("FOG", data$EVTYPE)] <- "FOG"
+data$EVTYPE[grepl("COLD|WINDCHILL|FREEZE|WINTER", data$EVTYPE)] <- "COLD"
+data$EVTYPE[grepl("LIGHTNING", data$EVTYPE)] <- "LIGHTNING"
+data$EVTYPE[grepl("RAIN|SHOWER", data$EVTYPE)] <- "RAIN"
+data$EVTYPE[grepl("HEAT|WARM|HOT", data$EVTYPE)] <- "HEAT"
+data$EVTYPE[grepl("DROUGHT|DRY", data$EVTYPE)] <- "DRY"
+data$EVTYPE[grepl("WIND|MICROBURST", data$EVTYPE)] <- "WIND"
+data$EVTYPE[grepl("FLOOD", data$EVTYPE)] <- "FLOOD"
+data$EVTYPE[grepl("TORNADO", data$EVTYPE)] <- "TORNADO"
+data$EVTYPE[grepl("TSTM|THUNDERSTORM", data$EVTYPE)] <- "THUNDERSTORM" 
+data$EVTYPE[grepl("TROPICAL|STORM", data$EVTYPE)] <- "STORM"
+data$EVTYPE <- as.factor(data$EVTYPE)
+```
+
+For the PROPDMGEXP and CROPDMGEXP columns (which we will use heavily later) we need to convert the factor values to numeric values, so that the PROPDMG and CROPDMG columns can be better represented and compared between event types.
+```{r}
+data$PROPDMGEXP<-as.character(data$PROPDMGEXP)
+data$PROPDMGEXP[grepl("K", data$PROPDMGEXP)] <- 1000  
+data$PROPDMGEXP[grepl("M", data$PROPDMGEXP)] <- 1000000
+data$PROPDMGEXP[grepl("B", data$PROPDMGEXP)] <- 1000000000
+data$PROPDMGEXP<-as.numeric(data$PROPDMGEXP)
+
+data$CROPDMGEXP<-as.character(data$CROPDMGEXP)
+data$CROPDMGEXP[grepl("K", data$CROPDMGEXP)] <- 1000  
+data$CROPDMGEXP[grepl("M", data$CROPDMGEXP)] <- 1000000
+data$CROPDMGEXP[grepl("B", data$CROPDMGEXP)] <- 1000000000
+data$CROPDMGEXP<-as.numeric(data$CROPDMGEXP)
+```
+## Results
+### Across the United States, which types of events (as indicated in the EVTYPE variable) are most harmful with respect to population health?
+We create the new dataset dataQ1Agg from data:
+```{r}
+dataQ1<-select(data, EVTYPE, FATALITIES, INJURIES)
+dataQ1Agg<-setNames(aggregate(data = dataQ1, FATALITIES+INJURIES~EVTYPE, sum, na.rm=TRUE ), c("EventType", "TotalInjuriesandFatalities"))
+```
+
+Using dataQ1Agg and the Injuries and Fatalities fields as measures we see that Tornados is the event most harmful to humans:
+
+```{r}
+dataQ1Agg[which.max(dataQ1Agg$TotalInjuriesandFatalities),]
+```
+
+By arranging the aggregated data in descending order and taking the top five rows we see that the other high impact events include Heat, Flood, Lightning and Wind.
+```{r}
+orderedDataQ1Agg <-arrange(dataQ1Agg, desc(TotalInjuriesandFatalities))
+orderedDataQ1Agg[1:5,]
+```
+###Across the United States, which types of events have the greatest economic consequences?
+We create the new dataset dataQ2Agg from data:
+```{r}
+dataQ2<-select(data, EVTYPE, PROPDMG, PROPDMGEXP, CROPDMG, CROPDMGEXP)
+dataQ2<-mutate(dataQ2,PROPERTYEXPENSE = PROPDMG * PROPDMGEXP)
+dataQ2<-mutate(dataQ2,CROPEXPENSE = CROPDMG * CROPDMGEXP)
+dataQ2Agg<-setNames(aggregate(data = dataQ2, PROPERTYEXPENSE+CROPEXPENSE~EVTYPE, sum, na.rm=TRUE ), c("EventType", "TotalPropertyDamageAndCropDamage"))
+```
+Using dataQ2Agg and the PropertyDamage and CropDamage fields as measures we see that Flood is the event with greatest economic impact:
+```{r}
+dataQ2Agg[which.max(dataQ2Agg$TotalPropertyDamageAndCropDamage),]
+```
+By arranging the aggregated data in descending order and taking the top five rows we see that other high impact events include Tornado, Hurricane, Wind and Hail:
+```{r}
+orderedDataQ2Agg <-arrange(dataQ2Agg, desc(TotalPropertyDamageAndCropDamage))
+orderedDataQ2Agg[1:5,]
+```
+We illustrate these findings with a graph:
+```{r}
+q2graph <- setNames(orderedDataQ2Agg[1:5,],c("EventType", "TotalDamage"))
+p<-ggplot(data = q2graph, aes(x=EventType, y=TotalDamage))
+p+geom_bar(stat = "identity",fill = "#FF6666")+labs(x="Event Type", y="Total Property Damage and Crop Damage in $",title = "Economic Impact for Top 5 Event Types")
+```
