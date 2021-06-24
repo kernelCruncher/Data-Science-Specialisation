@@ -46,29 +46,24 @@ rankHospital <- function(state, condition, num){
   
   outcome <- list[[condition]]
   data[,outcome] <- as.numeric(data[,outcome])
-  hospital <- split(data[,outcome], data$State)
-  stateValue <- sort(hospital[[state]])
-  
+ newTable <- data[data$State == state, c(outcome, "Hospital.Name")]
+orderedTable <- newTable[order(newTable[,outcome], newTable$"Hospital.Name", na.last = NA),]  
+
   if (num == "best"){
     num <- 1
   }
   else if(num == "worst") {
-    num <- length(stateValue)
+    num <- nrow(orderedTable)
   }
   else if(is.numeric(x=num)) {
-    if(num < 1 || num > length(stateValue)) {
+    if(num < 1 || num > nrow(orderedTable)) {
       return(NA)
     }
   }
- 
-  numValue <- stateValue[num]
-  possibleRows <- data[data$State == state & data[,outcome]== numValue & !is.na(data[,outcome]),]
-  possibleHospitals <- sort(possibleRows$Hospital.Name)
   
-  possibleHospitals[1]
+  orderedTable[num, "Hospital.Name"]
   
 }
-
 
 ## Method 3
 
@@ -87,30 +82,25 @@ rankall <- function(condition, num){
   
   uniqueStateList <- unique(data$State)
   data[,outcome] <- as.numeric(data[,outcome])
-  hospital <- split(data[,outcome], data$State)
   
   hospitalList <- sapply(uniqueStateList, function (state) {
     
-    stateValue <- sort(hospital[[state]])
+    newTable <- data[data$State == state, c(outcome, "Hospital.Name")]
+    orderedTable <- newTable[order(newTable[,outcome], newTable$"Hospital.Name", na.last = NA),]  
     
     if (num == "best"){
       num <- 1
     }
     else if(num == "worst") {
-      num <- length(stateValue)
+      num <- nrow(orderedTable)
     }
     
-    numValue <- stateValue[num]
-    possibleRows <- data[data$State == state & data[,outcome]== numValue & !is.na(data[,outcome]),]
-    possibleHospitals <- sort(possibleRows$Hospital.Name)
-    
-    possibleHospitals[1]
-    
+    orderedTable[num, "Hospital.Name"]
   })
   
   frame <- cbind(hospitalList, uniqueStateList)
   dataframe <- data.frame(frame)
-  colnames(dataframe)<- c("Hospital","State")
+  colnames(dataframe)<- c("hospital","state")
   
   return(dataframe)
   
