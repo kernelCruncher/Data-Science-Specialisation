@@ -1,0 +1,38 @@
+---
+output:
+  html_document: default
+  pdf_document: default
+---
+Basic Inferential Data Analysis
+==========================================
+###Data Loading and Exploratory Analysis
+We load the ToothGrowth data and view the first 5 entries. The response is the length of odontoblasts (cells responsible for tooth growth) in 60 guinea pigs. Each animal received one of three dose levels of vitamin C (0.5, 1, and 2 mg/day) by one of two delivery methods, orange juice or ascorbic acid (a form of vitamin C and coded as VC). 
+```{r}
+data("ToothGrowth")
+head(ToothGrowth)
+```
+
+We perform the following exploratory analysis which clearly suggests that Dosage has a clear effect on odontoblast level.
+```{r}
+boxplot(len~supp+dose, data=ToothGrowth, notch=FALSE,
+  col=(c("red","blue")),
+  main="Tooth Growth", xlab="Supplement and Dose", ylab = "Odontoblast Length") 
+```
+
+The following is a summary of the ToothGrowth data:
+```{r}
+summary(ToothGrowth)
+```
+
+###Confidence Intervals
+An interesting question is whether Supplement has any effect on odontoblast level. We investigate to see if one Supplement is more effective than another. We perform a t-test against the two different supplement groups to compare their sample means. We use a t-test, rather than a normal test since since we do not know the population variance.
+
+```{r}
+r2 <- t.test(len~supp, paired=F, data=ToothGrowth)
+r2$p.value
+r2$conf.int
+```
+The p-value shows that the test is not statistically significant at the 5% level.
+
+###Conclusion
+We have assumed an uneven variance between the two groups of supplements and a two sided 5%- significance level. The t-test suggests that there is not enough evidence to reject the null hypothesis of the two supplements having the same effect. Visually, we can see that high dosages cause the odontoblasts to grow longer.
